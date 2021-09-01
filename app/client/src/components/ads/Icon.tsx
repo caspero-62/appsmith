@@ -66,6 +66,7 @@ import { ReactComponent as SupportIcon } from "assets/icons/ads/support.svg";
 import { ReactComponent as GitBranch } from "assets/icons/ads/git-branch.svg";
 import { ReactComponent as Snippet } from "assets/icons/ads/snippet.svg";
 import { ReactComponent as WorkspaceIcon } from "assets/icons/ads/organizationIcon.svg";
+import { ReactComponent as SettingIcon } from "assets/icons/control/settings.svg";
 
 import styled from "styled-components";
 import { CommonComponentProps, Classes } from "./common";
@@ -271,6 +272,9 @@ export const IconCollection = [
   "edit-underline",
   "down-arrow",
   "loader",
+  "git-branch",
+  "snippet",
+  "setting",
 ] as const;
 
 export type IconName = typeof IconCollection[number];
@@ -615,6 +619,12 @@ const Icon = forwardRef(
         break;
       case "warning-triangle":
         returnIcon = <WarningTriangleIcon />;
+        break;
+      case "setting":
+        returnIcon = <SettingIcon />;
+        break;
+      case "support":
+        returnIcon = <SupportIcon />;
         break;
       case "workspace":
         returnIcon = <WorkspaceIcon />;
