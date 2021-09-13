@@ -272,8 +272,6 @@ export const IconCollection = [
   "edit-underline",
   "down-arrow",
   "loader",
-  "git-branch",
-  "snippet",
   "setting",
 ] as const;
 

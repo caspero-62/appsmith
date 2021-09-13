@@ -5,10 +5,12 @@ import styled from "styled-components";
 import Icon, { IconSize } from "components/ads/Icon";
 import { getTypographyByKey } from "constants/DefaultTheme";
 import { Setting } from "../SettingsConfig";
+import { useSelector } from "store";
+import { getSettings } from "selectors/settingsSelectors";
+import { Colors } from "constants/Colors";
 
 type FieldHelperProps = {
-  helpText?: string;
-  label: string;
+  setting: Setting;
   children: React.ReactNode;
 };
 
@@ -18,7 +20,7 @@ const StyledIcon = styled(Icon)`
 
 export const StyledFormGroup = styled.div`
   width: 357px;
-  margin-bottom: ${(props) => props.theme.spaces[3]}px;
+  margin-bottom: ${(props) => props.theme.spaces[11]}px;
 
   & span.bp3-popover-target {
     display: inline-block;
@@ -27,7 +29,7 @@ export const StyledFormGroup = styled.div`
     width: 14px;
     padding: 3px 3px;
     position: relative;
-    top: -1px;
+    top: -2px;
     left: 6px;
     cursor: default;
   }
@@ -46,16 +48,22 @@ export const StyledLabel = styled.label`
   color: ${(props) => props.theme.colors.textInput.normal.text};
 `;
 
-export function FormGroup({ children, helpText, label }: FieldHelperProps) {
+export const StyledSubtext = styled.p`
+  font-size: 12px;
+  color: ${Colors.GRAY};
+`;
+
+export function FormGroup({ children, setting }: FieldHelperProps) {
   return (
     <StyledFormGroup>
-      <StyledLabel>{label}</StyledLabel>
-      {helpText && (
-        <Tooltip content={createMessage(() => helpText)}>
+      <StyledLabel>{setting.label}</StyledLabel>
+      {setting.helpText && (
+        <Tooltip content={createMessage(() => setting.helpText || "")}>
           <StyledIcon fillColor="#fff" name="help" size={IconSize.XXS} />
         </Tooltip>
       )}
       {children}
+      {setting.subText && <StyledSubtext>* {setting.subText}</StyledSubtext>}
     </StyledFormGroup>
   );
 }

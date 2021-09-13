@@ -720,3 +720,6 @@ export const WELCOME_FORM_NEWLETTER_HEADER = () => "Stay in touch";
 export const WELCOME_FORM_NEWLETTER_LABEL = () =>
   "Get updates about what we are cooking. We do not spam you.";
 export const WELCOME_FORM_SUBMIT_LABEL = () => "Make your first App";
+
+//settings
+export const ADMIN_SETTINGS = () => "Admin settings";

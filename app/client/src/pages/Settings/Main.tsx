@@ -26,7 +26,7 @@ import {
 import styled from "styled-components";
 import history from "utils/history";
 import Group from "./Main/group";
-import { SettingsFactory } from "./SettingsConfig";
+import { SettingsFactory, SettingTypes } from "./SettingsConfig";
 
 const Wrapper = styled.div`
   flex-basis: calc(100% - ${(props) => props.theme.homePage.leftPane.width}px);
@@ -34,6 +34,8 @@ const Wrapper = styled.div`
     props.theme.homePage.leftPane.rightMargin +
     props.theme.homePage.leftPane.leftPadding}px;
   padding-top: 40px;
+  height: calc(100vh - ${(props) => props.theme.homePage.header}px);
+  overflow: auto;
 `;
 
 const BackButton = styled.div`
@@ -43,11 +45,24 @@ const BackButton = styled.div`
 
 const BackButtonText = styled.span``;
 
-const SettingsFormWrapper = styled.div`
-  margin-top: 32px;
-`;
+const SettingsFormWrapper = styled.div``;
 
-const SettingsButtonWrapper = styled.div``;
+const SettingsButtonWrapper = styled.div`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: ${(props) => props.theme.settings.footerHeight}px;
+  padding: ${(props) => props.theme.spaces[11]}px 0px 0px
+    ${(props) =>
+      props.theme.spaces[6] +
+      props.theme.homePage.leftPane.leftPadding +
+      props.theme.homePage.leftPane.rightMargin +
+      props.theme.homePage.leftPane.width}px;
+  box-shadow: ${(props) => props.theme.settings.footerShadow};
+  z-index: 2;
+  background-color: ${(props) => props.theme.colors.homepageBackground};
+`;
 
 const StyledButton = styled(Button)`
   height: 24px;
@@ -57,36 +72,49 @@ const StyledButton = styled(Button)`
 
 const StyledSaveButton = styled(StyledButton)`
   width: 118px;
+  height: 38px;
 `;
 
 const StyledClearButton = styled(StyledButton)`
   width: 68px;
+  height: 38px;
 `;
 
 export const BottomSpace = styled.div`
-  height: 20px;
+  height: ${(props) => props.theme.settings.footerHeight + 20}px;
+`;
+
+export const SettingsHeader = styled.h2`
+  font-size: 24px;
+  font-weight: 500;
+  text-transform: capitalize;
+  margin-bottom: 0;
 `;
 
 type MainProps = {
   settings: Record<string, string>;
 };
 
-function createSettingLabel(name = "") {
-  return name.replace(/_/g, " ").toUpperCase();
+function getSettingLabel(name = "") {
+  return name.replace(/-/g, " ");
 }
 
-function useSettings(config: Record<string, string>, category: string) {
-  return SettingsFactory.get(config, category);
+function useSettings(
+  config: Record<string, string | boolean>,
+  category: string,
+) {
+  return SettingsFactory.get(category);
 }
 
 export function Main(
   props: InjectedFormProps & RouteComponentProps & MainProps,
 ) {
   const { category } = useParams() as any;
-  const config = useSelector(getSettings);
-  const settings = useSettings(config, category);
+  const settingsConfig = useSelector(getSettings);
+  const settings = useSettings(settingsConfig, category);
   const isSaving = useSelector(getSettingsSavingState);
   const dispatch = useDispatch();
+  const isSavable = SettingsFactory.savableCategories.has(category);
 
   const onBack = () => {
     history.push(APPLICATIONS_URL);
@@ -96,11 +124,14 @@ export function Main(
   };
 
   const onClear = () => {
-    const initialValues: Record<string, string | boolean> = {};
-    settings.forEach((setting) => {
-      initialValues[setting.name] = setting.value;
+    _.forEach(settingsConfig, (value, settingName) => {
+      const setting = SettingsFactory.settingsMap[settingName];
+      if (setting && setting.controlType == SettingTypes.TOGGLE) {
+        settingsConfig[settingName] =
+          settingsConfig[settingName].toString() == "true";
+      }
     });
-    props.initialize(initialValues);
+    props.initialize(settingsConfig);
   };
 
   useEffect(onClear, [category]);
@@ -116,24 +147,27 @@ export function Main(
         <BackButtonText>&nbsp;Back</BackButtonText>
       </BackButton>
       <SettingsFormWrapper>
+        <SettingsHeader>{getSettingLabel(category)} settings</SettingsHeader>
         <Group settings={settings} />
-        <SettingsButtonWrapper>
-          <StyledSaveButton
-            category={Category.primary}
-            disabled={Object.keys(props.settings).length == 0 || !props.valid}
-            isLoading={isSaving}
-            onClick={onSave}
-            tag="button"
-            text={createMessage(() => "Save changes")}
-          />
-          <StyledClearButton
-            category={Category.tertiary}
-            disabled={Object.keys(props.settings).length == 0}
-            onClick={onClear}
-            tag="button"
-            text={createMessage(() => "Clear")}
-          />
-        </SettingsButtonWrapper>
+        {isSavable && (
+          <SettingsButtonWrapper>
+            <StyledSaveButton
+              category={Category.primary}
+              disabled={Object.keys(props.settings).length == 0 || !props.valid}
+              isLoading={isSaving}
+              onClick={onSave}
+              tag="button"
+              text={createMessage(() => "Save changes")}
+            />
+            <StyledClearButton
+              category={Category.tertiary}
+              disabled={Object.keys(props.settings).length == 0}
+              onClick={onClear}
+              tag="button"
+              text={createMessage(() => "Clear")}
+            />
+          </SettingsButtonWrapper>
+        )}
         <BottomSpace />
       </SettingsFormWrapper>
     </Wrapper>
@@ -154,16 +188,15 @@ const validate = (values: Record<string, any>) => {
 const selector = formValueSelector(SETTINGS_FORM_NAME);
 export default withRouter(
   connect((state: AppState, props: RouteComponentProps) => {
-    const category = (props.match.params as any).category;
-    const settings = useSettings(getSettings(state), category);
+    const settingsConfig = getSettings(state);
     const newProps: any = {
       settings: {},
     };
-    settings.forEach((setting) => {
-      const fieldValue = selector(state, setting.name);
+    _.forEach(SettingsFactory.settingsMap, (setting, name) => {
+      const fieldValue = selector(state, name);
 
-      if (fieldValue != setting.value) {
-        newProps.settings[setting.name] = selector(state, setting.name);
+      if (fieldValue !== settingsConfig[name]) {
+        newProps.settings[name] = fieldValue;
       }
     });
     return newProps;

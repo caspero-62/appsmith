@@ -18,6 +18,7 @@ import UserApi from "api/UserApi";
 import { Colors } from "constants/Colors";
 import { useSelector } from "react-redux";
 import { getCurrentUser } from "selectors/usersSelectors";
+import { ADMIN_SETTINGS, createMessage } from "constants/messages";
 
 type TagProps = CommonComponentProps & {
   onClick?: (text: string) => void;
@@ -134,7 +135,7 @@ export default function ProfileDropdown(props: TagProps) {
               path: SETTINGS_CATEGORY_DEFAULT_URL,
             });
           }}
-          text="Admin settings"
+          text={createMessage(ADMIN_SETTINGS)}
         />
       )}
       <StyledMenuItem

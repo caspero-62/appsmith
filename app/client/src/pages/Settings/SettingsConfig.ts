@@ -1,3 +1,10 @@
+import { ReduxAction, ReduxActionTypes } from "constants/ReduxActionConstants";
+import {
+  EMAIL_SETUP_DOC,
+  GITHUB_SIGNUP_SETUP_DOC,
+  GOOGLE_MAPS_SETUP_DOC,
+  GOOGLE_SIGNUP_SETUP_DOC,
+} from "constants/ThirdPartyConstants";
 import _ from "lodash";
 import { isEmail } from "utils/formhelpers";
 
@@ -7,6 +14,7 @@ export enum SettingTypes {
   LINK = "LINK",
   BUTTON = "BUTTON",
   GROUP = "GROUP",
+  TEXT = "TEXT",
 }
 
 export enum SettingSubtype {
@@ -21,22 +29,76 @@ export type Setting = {
   controlType: SettingTypes;
   controlSubType?: SettingSubtype;
   helpText?: string;
-  label: string;
+  label?: string;
   name?: string;
   placeholder?: string;
   validate?: (value: string, setting?: Setting) => string | void;
   url?: string;
   children?: any;
   subCategory?: string;
+  value?: string;
+  text?: string;
+  action?: () => Partial<ReduxAction<any>>;
+  sortOrder?: number;
+  subText?: string;
+  toggleText?: (value: boolean) => string;
+  isVisible?: (values: Record<string, any>) => boolean;
 };
 
 export class SettingsFactory {
   static settingsMap: Record<string, Setting> = {};
+  static settings: Setting[] = [];
   static categories: Set<string> = new Set();
+  static savableCategories: Set<string> = new Set();
+  static sortOrder = 0;
+  static subCategoryMap: Record<any, any> = {};
 
   static register(name: string, options: Setting) {
     SettingsFactory.categories.add(options.category);
-    SettingsFactory.settingsMap[name] = options;
+    SettingsFactory.settingsMap[name] = {
+      ...options,
+      sortOrder: ++SettingsFactory.sortOrder,
+    };
+    if (
+      options.controlType !== SettingTypes.GROUP &&
+      options.controlType !== SettingTypes.LINK &&
+      options.controlType !== SettingTypes.TEXT
+    ) {
+      SettingsFactory.savableCategories.add(options.category);
+    }
+
+    if (options.subCategory) {
+      if (
+        !SettingsFactory.subCategoryMap[
+          `${options.category}.${options.subCategory}`
+        ]
+      ) {
+        SettingsFactory.subCategoryMap[
+          `${options.category}.${options.subCategory}`
+        ] = {
+          name: options.subCategory,
+          category: options.category,
+          controlType: SettingTypes.GROUP,
+          children: [],
+        };
+        SettingsFactory.settings.push(
+          SettingsFactory.subCategoryMap[
+            `${options.category}.${options.subCategory}`
+          ],
+        );
+      }
+      SettingsFactory.subCategoryMap[
+        `${options.category}.${options.subCategory}`
+      ].children.push({
+        name,
+        ...options,
+      });
+    } else {
+      SettingsFactory.settings.push({
+        name,
+        ...options,
+      });
+    }
   }
 
   static validate(name: string, value: string) {
@@ -48,54 +110,27 @@ export class SettingsFactory {
     return "";
   }
 
-  static get(config: any, category: string) {
-    const settings: any[] = [];
-    const subCategoryMap: any = {};
-
-    _.forEach(SettingsFactory.settingsMap, (options, name) => {
-      if (options.category !== category) {
-        return;
-      }
-      if (options.subCategory) {
-        if (!subCategoryMap[options.subCategory]) {
-          subCategoryMap[options.subCategory] = {
-            name: options.subCategory,
-            controlType: SettingTypes.GROUP,
-            children: [],
-          };
-          settings.push(subCategoryMap[options.subCategory]);
-        }
-        subCategoryMap[options.subCategory].children.push({
-          name,
-          value:
-            options.controlType == "TOGGLE"
-              ? (config[name] || "").toString() == "true"
-              : config[name],
-          ...options,
-        });
-      } else {
-        settings.push({
-          name,
-          value:
-            options.controlType == "TOGGLE"
-              ? (config[name] || "").toString() == "true"
-              : config[name],
-          ...options,
-        });
-      }
-    });
-
-    return settings;
+  static get(category: string) {
+    return SettingsFactory.settings.filter(
+      (setting) => setting.category === category,
+    );
   }
 }
 
 //EMAIL
+SettingsFactory.register("APPSMITH_MAIL_READ_MORE", {
+  category: "email",
+  controlType: SettingTypes.LINK,
+  label: "How to configure?",
+  url: EMAIL_SETUP_DOC,
+});
+
 SettingsFactory.register("APPSMITH_MAIL_HOST", {
   category: "email",
   controlType: SettingTypes.TEXTINPUT,
   controlSubType: SettingSubtype.TEXT,
   label: "SMTP Host",
-  placeholder: "smtp.yourservice.com",
+  placeholder: "email-smtp.us-east-2.amazonaws.com",
   validate: (value: string) => {
     if (
       value &&
@@ -120,6 +155,21 @@ SettingsFactory.register("APPSMITH_MAIL_PORT", {
   },
 });
 
+SettingsFactory.register("APPSMITH_MAIL_FROM", {
+  category: "email",
+  controlType: SettingTypes.TEXTINPUT,
+  controlSubType: SettingSubtype.TEXT,
+  label: "From Address",
+  placeholder: "admin@appsmith.com",
+  validate: (value: string) => {
+    if (value && !isEmail(value)) {
+      return "Please enter a valid email id";
+    }
+  },
+  subText:
+    "You will need to verify your from email address to begin sending emails",
+});
+
 SettingsFactory.register("APPSMITH_MAIL_SMTP_TLS_ENABLED", {
   category: "email",
   controlType: SettingTypes.TOGGLE,
@@ -131,7 +181,9 @@ SettingsFactory.register("APPSMITH_MAIL_USERNAME", {
   controlType: SettingTypes.TEXTINPUT,
   controlSubType: SettingSubtype.TEXT,
   label: "SMTP Username",
-  placeholder: "smtp.yourservice.com",
+  isVisible: (values: Record<string, any>) => {
+    return values && values["APPSMITH_MAIL_SMTP_TLS_ENABLED"];
+  },
 });
 
 SettingsFactory.register("APPSMITH_MAIL_PASSWORD", {
@@ -139,19 +191,8 @@ SettingsFactory.register("APPSMITH_MAIL_PASSWORD", {
   controlType: SettingTypes.TEXTINPUT,
   controlSubType: SettingSubtype.PASSWORD,
   label: "SMTP Password",
-  placeholder: "smtp.yourservice.com",
-});
-
-SettingsFactory.register("APPSMITH_MAIL_FROM", {
-  category: "email",
-  controlType: SettingTypes.TEXTINPUT,
-  controlSubType: SettingSubtype.TEXT,
-  label: "From Address",
-  placeholder: "smtp.yourservice.com",
-  validate: (value: string) => {
-    if (value && !isEmail(value)) {
-      return "Please enter a valid email id";
-    }
+  isVisible: (values: Record<string, any>) => {
+    return values && values["APPSMITH_MAIL_SMTP_TLS_ENABLED"];
   },
 });
 
@@ -169,7 +210,9 @@ SettingsFactory.register("APPSMITH_ADMIN_EMAILS", {
   controlType: SettingTypes.TEXTINPUT,
   controlSubType: SettingSubtype.EMAIL,
   label: "Admin Email",
-  helpText: "Comma seperated email Ids",
+  subText:
+    "Emails of the users who can modify instance settings (Comma Separated)",
+  placeholder: "Jane@example.com",
   validate: (value: string) => {
     if (
       value &&
@@ -182,32 +225,65 @@ SettingsFactory.register("APPSMITH_ADMIN_EMAILS", {
   },
 });
 
+//To be uncommented when api is available
+// SettingsFactory.register("APPSMITH_DOWNLOAD_DOCKER_COMPOSE_FILE", {
+//   action: () => ({ type: ReduxActionTypes.DOWNLOAD_DOCKER_COMPOSE_FILE }),
+//   category: "general",
+//   controlType: SettingTypes.BUTTON,
+//   label: "Generated Docker Compose File",
+//   text: "Download",
+// });
+
 SettingsFactory.register("APPSMITH_DISABLE_TELEMETRY", {
   category: "general",
   controlType: SettingTypes.TOGGLE,
-  label: "Anonymous Tracking",
+  label: "Share Anonymous Usage Data",
+  subText: "Share anonymous usage data to help improve the product",
+  toggleText: (value: boolean) => {
+    if (value) {
+      return "Share data & make appsmith better!";
+    } else {
+      return "Don't share any data";
+    }
+  },
 });
 
 //goolge maps
+SettingsFactory.register("APPSMITH_GOOGLE_MAPS_READ_MORE", {
+  category: "google-maps",
+  controlType: SettingTypes.LINK,
+  label: "How to configure?",
+  url: GOOGLE_MAPS_SETUP_DOC,
+});
+
 SettingsFactory.register("APPSMITH_GOOGLE_MAPS_API_KEY", {
   category: "google-maps",
   controlType: SettingTypes.TEXTINPUT,
   controlSubType: SettingSubtype.TEXT,
-  label: "API Key",
-});
-
-SettingsFactory.register("APPSMITH_GOOGLE_MAPS_GUIDE", {
-  category: "google-maps",
-  controlType: SettingTypes.LINK,
-  label: "Guide to generate API Key",
-  url: "https://www.google.com",
+  label: "Google Maps API Key",
 });
 
 //authentication
 SettingsFactory.register("APPSMITH_SIGNUP_DISABLED", {
   category: "authentication",
+  subCategory: "form signup",
   controlType: SettingTypes.TOGGLE,
-  label: "Form Signup",
+  label: "Allow Signup",
+  toggleText: (value: boolean) => {
+    if (value) {
+      return " Allow all users to signup";
+    } else {
+      return "Allow invited users to signup";
+    }
+  },
+});
+
+SettingsFactory.register("APPSMITH_OAUTH2_GOOGLE_READ_MORE", {
+  category: "authentication",
+  subCategory: "google signup",
+  controlType: SettingTypes.LINK,
+  label: "How to configure?",
+  url: GOOGLE_SIGNUP_SETUP_DOC,
 });
 
 SettingsFactory.register("APPSMITH_OAUTH2_GOOGLE_CLIENT_ID", {
@@ -234,10 +310,51 @@ SettingsFactory.register("APPSMITH_OAUTH2_GOOGLE_CLIENT_SECRET", {
   label: "Client Secret",
 });
 
+SettingsFactory.register("APPSMITH_OAUTH2_GITHUB_READ_MORE", {
+  category: "authentication",
+  subCategory: "github signup",
+  controlType: SettingTypes.LINK,
+  label: "How to configure?",
+  url: GITHUB_SIGNUP_SETUP_DOC,
+});
+
 SettingsFactory.register("APPSMITH_OAUTH2_GITHUB_CLIENT_ID", {
   category: "authentication",
   subCategory: "github signup",
   controlType: SettingTypes.TEXTINPUT,
   controlSubType: SettingSubtype.TEXT,
   label: "Client ID",
+});
+
+//version
+SettingsFactory.register("APPSMITH_CURRENT_VERSION", {
+  category: "version",
+  controlType: SettingTypes.TEXT,
+  label: "Current version",
+});
+
+SettingsFactory.register("APPSMITH_VERSION_READ_MORE", {
+  action: () => ({ type: ReduxActionTypes.REDIRECT_TO_RELEASE_NOTES }),
+  category: "version",
+  controlType: SettingTypes.LINK,
+  label: "Release Notes",
+});
+
+//Advanced
+SettingsFactory.register("APPSMITH_MONGODB_URI", {
+  category: "advanced",
+  controlType: SettingTypes.TEXTINPUT,
+  controlSubType: SettingSubtype.TEXT,
+  label: "MongoDB URI",
+  subText:
+    "Appsmith internally uses mongo DB. Change to an external MongoDb for Clustering",
+});
+
+SettingsFactory.register("APPSMITH_REDIS_URL", {
+  category: "advanced",
+  controlType: SettingTypes.TEXTINPUT,
+  controlSubType: SettingSubtype.TEXT,
+  label: "Redis URL",
+  subText:
+    "Appsmith internally uses redis for session storage. Change this to an external redis for Clustering",
 });

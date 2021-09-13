@@ -183,8 +183,8 @@ class UserApi extends Api {
   ): AxiosPromise<ApiResponse> {
     return Api.patch(UserApi.commentsOnboardingStateURL, request);
   }
-  
-  static fetchSettings(): AxiosPromise<ApiResponse> {
+
+  static fetchAdminSettings(): AxiosPromise<ApiResponse> {
     return Api.get(UserApi.adminSettingsURL);
   }
 

@@ -3,19 +3,28 @@ import { Variant } from "components/ads/common";
 import { Toaster } from "components/ads/Toast";
 import { ReduxAction, ReduxActionTypes } from "constants/ReduxActionConstants";
 import { APPLICATIONS_URL } from "constants/routes";
+import { GET_RELEASE_NOTES_URL } from "constants/ThirdPartyConstants";
 import { User } from "constants/userConstants";
-import { takeLatest, all, call, put } from "redux-saga/effects";
+import { takeLatest, all, call, put, select } from "redux-saga/effects";
+import { getCurrentVersion } from "selectors/settingsSelectors";
 import history from "utils/history";
 import { validateResponse } from "./ErrorSagas";
+import { getAppsmithConfigs } from "configs";
 
 function* FetchAdminSettingsSaga() {
-  const response = yield call(UserApi.fetchSettings);
+  const response = yield call(UserApi.fetchAdminSettings);
   const isValidResponse = yield validateResponse(response);
 
   if (isValidResponse) {
+    const { appVersion } = getAppsmithConfigs();
+
+    const settings = {
+      ...response.data,
+      APPSMITH_CURRENT_VERSION: appVersion,
+    };
     yield put({
       type: ReduxActionTypes.FETCH_ADMIN_SETTINGS_SUCCESS,
-      payload: response.data,
+      payload: settings,
     });
   } else {
     yield put({
@@ -31,10 +40,6 @@ function* FetchAdminSettingsErrorSaga() {
 
 function* SaveAdminSettingsSaga(action: ReduxAction<Record<string, string>>) {
   const settings = action.payload;
-  yield put({
-    type: ReduxActionTypes.FETCH_ADMIN_SETTINGS_SUCCESS,
-    payload: settings,
-  });
   const response = yield call(UserApi.saveAdminSettings, settings);
   const isValidResponse = yield validateResponse(response);
 
@@ -46,10 +51,23 @@ function* SaveAdminSettingsSaga(action: ReduxAction<Record<string, string>>) {
     yield put({
       type: ReduxActionTypes.SAVE_ADMIN_SETTINGS_SUCCESS,
     });
+    yield put({
+      type: ReduxActionTypes.FETCH_ADMIN_SETTINGS_SUCCESS,
+      payload: settings,
+    });
   } else {
     yield put({
       type: ReduxActionTypes.SAVE_ADMIN_SETTINGS_ERROR,
     });
+  }
+}
+
+function* RedirectToReleaseNotes() {
+  const currentVersion = yield select(getCurrentVersion);
+  if (currentVersion) {
+    window
+      .open(GET_RELEASE_NOTES_URL(currentVersion.tagName), "_blank")
+      ?.focus();
   }
 }
 
@@ -63,6 +81,10 @@ function* InitSuperUserSaga(action: ReduxAction<User>) {
         FetchAdminSettingsErrorSaga,
       ),
       takeLatest(ReduxActionTypes.SAVE_ADMIN_SETTINGS, SaveAdminSettingsSaga),
+      takeLatest(
+        ReduxActionTypes.REDIRECT_TO_RELEASE_NOTES,
+        RedirectToReleaseNotes,
+      ),
     ]);
   }
 }
