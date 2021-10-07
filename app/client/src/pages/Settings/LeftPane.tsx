@@ -1,6 +1,6 @@
 import { getSettingsCategoryUrl } from "constants/routes";
 import React from "react";
-import { Link, RouteComponentProps, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import styled from "styled-components";
 import { SettingsFactory } from "./SettingsConfig";
 
@@ -62,7 +62,7 @@ function useSettingsCategory() {
     });
 }
 
-export default function LeftPane(props: RouteComponentProps) {
+export default function LeftPane() {
   const categories = useSettingsCategory();
   const { category } = useParams() as any;
   return (

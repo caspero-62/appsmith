@@ -3,8 +3,7 @@ import Text, { TextType } from "components/ads/Text";
 import React from "react";
 import { useDispatch } from "react-redux";
 import styled from "styled-components";
-import { Setting } from "../SettingsConfig";
-import { FormGroup, SettingComponentProps } from "./Common";
+import { SettingComponentProps } from "./Common";
 
 const LinkWrapper = styled.div`
   margin-bottom: ${(props) => props.theme.spaces[16]}px;

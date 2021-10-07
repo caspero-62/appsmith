@@ -5,7 +5,6 @@ import {
   GOOGLE_MAPS_SETUP_DOC,
   GOOGLE_SIGNUP_SETUP_DOC,
 } from "constants/ThirdPartyConstants";
-import _ from "lodash";
 import { isEmail } from "utils/formhelpers";
 
 export enum SettingTypes {

@@ -4,7 +4,6 @@ import PageWrapper from "pages/common/PageWrapper";
 import React from "react";
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { RouteComponentProps } from "react-router";
 import { getSettingsLoadingState } from "selectors/settingsSelectors";
 import styled from "styled-components";
 import LeftPane from "./LeftPane";
@@ -22,7 +21,7 @@ const LoaderContainer = styled.div`
   width: 100%;
 `;
 
-function Settings(props: RouteComponentProps) {
+function Settings() {
   const dispatch = useDispatch();
   const isLoading = useSelector(getSettingsLoadingState);
   useEffect(() => {
@@ -39,7 +38,7 @@ function Settings(props: RouteComponentProps) {
           </LoaderContainer>
         ) : (
           <>
-            <LeftPane {...props} />
+            <LeftPane />
             <Main />
           </>
         )}

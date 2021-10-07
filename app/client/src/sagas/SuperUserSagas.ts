@@ -20,7 +20,7 @@ function* FetchAdminSettingsSaga() {
 
     const settings = {
       ...response.data,
-      APPSMITH_CURRENT_VERSION: appVersion,
+      APPSMITH_CURRENT_VERSION: appVersion.id,
     };
     yield put({
       type: ReduxActionTypes.FETCH_ADMIN_SETTINGS_SUCCESS,

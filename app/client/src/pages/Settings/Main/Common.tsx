@@ -5,8 +5,6 @@ import styled from "styled-components";
 import Icon, { IconSize } from "components/ads/Icon";
 import { getTypographyByKey } from "constants/DefaultTheme";
 import { Setting } from "../SettingsConfig";
-import { useSelector } from "store";
-import { getSettings } from "selectors/settingsSelectors";
 import { Colors } from "constants/Colors";
 
 type FieldHelperProps = {
