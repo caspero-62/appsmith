@@ -497,7 +497,7 @@ Cypress.Commands.add("NavigateToHome", () => {
   cy.get(commonlocators.homeIcon).click({ force: true });
   // eslint-disable-next-line cypress/no-unnecessary-waiting
   cy.wait(1000);
-  cy.wait("@applications").should(
+  cy.wait("@getUser").should(
     "have.nested.property",
     "response.body.responseMeta.status",
     200,
